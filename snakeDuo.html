@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multiplayer Snake Game</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background-color: #333;
+      font-family: Arial, sans-serif;
+      color: white;
+    }
+    canvas {
+      background-color: #000;
+      border: 2px solid #555;
+      display: block;
+    }
+    #game-over {
+      position: absolute;
+      color: white;
+      font-size: 24px;
+      font-weight: bold;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-over" style="display: none;">Game Over! Press F5 to Restart</div>
+  <canvas id="game" width="600" height="400"></canvas>
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+
+    const box = 20; // Size of each square
+    const rows = canvas.height / box;
+    const cols = canvas.width / box;
+
+    // Snake data
+    const snake1 = {
+      color: "lime",
+      body: [{ x: box * 5, y: box * 5 }],
+      direction: "right",
+      controls: { up: "w", down: "s", left: "a", right: "d" },
+    };
+
+    const snake2 = {
+      color: "cyan",
+      body: [{ x: box * 15, y: box * 15 }],
+      direction: "left",
+      controls: { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight" },
+    };
+
+    let food = spawnFood();
+
+    // Spawn food at a random position
+    function spawnFood() {
+      return {
+        x: Math.floor(Math.random() * cols) * box,
+        y: Math.floor(Math.random() * rows) * box,
+      };
+    }
+
+    // Draw the game state
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw snakes
+      drawSnake(snake1);
+      drawSnake(snake2);
+
+      // Draw food
+      ctx.fillStyle = "red";
+      ctx.fillRect(food.x, food.y, box, box);
+
+      // Draw score
+      ctx.fillStyle = "white";
+      ctx.font = "16px Arial";
+      ctx.fillText(`Player 1: ${snake1.body.length - 1}`, 10, 20);
+      ctx.fillText(`Player 2: ${snake2.body.length - 1}`, canvas.width - 120, 20);
+    }
+
+    // Draw a snake
+    function drawSnake(snake) {
+      for (let i = 0; i < snake.body.length; i++) {
+        ctx.fillStyle = i === 0 ? "white" : snake.color; // Head is white, body is the snake's color
+        ctx.fillRect(snake.body[i].x, snake.body[i].y, box, box);
+      }
+    }
+
+    // Move a snake
+    function moveSnake(snake) {
+      if (!snake.direction) return;
+
+      const head = { ...snake.body[0] };
+
+      // Update the head position based on direction
+      if (snake.direction === "up") head.y -= box;
+      if (snake.direction === "down") head.y += box;
+      if (snake.direction === "left") head.x -= box;
+      if (snake.direction === "right") head.x += box;
+
+      // Check for collisions
+      if (
+        head.x < 0 ||
+        head.y < 0 ||
+        head.x >= canvas.width ||
+        head.y >= canvas.height ||
+        snake.body.some((segment) => segment.x === head.x && segment.y === head.y) ||
+        snakeCollision(snake1, snake2)
+      ) {
+        gameOver();
+        return false; // Game over
+      }
+
+      // Add the new head to the snake
+      snake.body.unshift(head);
+
+      // Check if food is eaten
+      if (head.x === food.x && head.y === food.y) {
+        food = spawnFood();
+      } else {
+        snake.body.pop(); // Remove the tail if food is not eaten
+      }
+
+      return true;
+    }
+
+    // Check for collisions between snakes
+    function snakeCollision(snakeA, snakeB) {
+      const headA = snakeA.body[0];
+      return snakeB.body.some((segment) => segment.x === headA.x && segment.y === headA.y);
+    }
+
+    // Game over function
+    function gameOver() {
+      clearInterval(gameInterval);
+      document.getElementById("game-over").style.display = "block";
+    }
+
+    // Handle key presses to change directions
+    document.addEventListener("keydown", (e) => {
+      changeDirection(snake1, e.key);
+      changeDirection(snake2, e.key);
+    });
+
+    function changeDirection(snake, key) {
+      const { up, down, left, right } = snake.controls;
+      if (key === up && snake.direction !== "down") snake.direction = "up";
+      if (key === down && snake.direction !== "up") snake.direction = "down";
+      if (key === left && snake.direction !== "right") snake.direction = "left";
+      if (key === right && snake.direction !== "left") snake.direction = "right";
+    }
+
+    // Game loop
+    const gameInterval = setInterval(() => {
+      const snake1Alive = moveSnake(snake1);
+      const snake2Alive = moveSnake(snake2);
+      if (snake1Alive && snake2Alive) {
+        draw();
+      }
+    }, 100);
+  </script>
+</body>
+</html>
